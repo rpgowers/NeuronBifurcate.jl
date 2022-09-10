@@ -3,6 +3,9 @@ uuid = "d7b4198e-a23e-4c33-9bf5-e25a08b66186"
 authors = ["Robert Gowers"]
 version = "0.1.0"
 
+[deps]
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+
 [compat]
 julia = "1"
 
