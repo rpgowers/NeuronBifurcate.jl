@@ -1,6 +1,6 @@
 include("model_arguments.jl")
 
-using Roots
+using Roots, ForwardDiff, Setfield
 
 function a∞(v,A,Δ)
   return 1/( 1+exp( -(v-A)/Δ ) )
@@ -38,3 +38,16 @@ function vfps(args)
   vfp = find_zeros(v->I∞(v,args), -120.0, 50.0)
 end
 export vfps
+
+function Iscale(args::Union{MLS_Param})
+  1
+end
+
+function sn(args)
+  args_temp = @set args.Iext = 0.0
+  f(v) = I∞(v,args_temp)
+  vsn = find_zeros(v->ForwardDiff.derivative(f,v), -100.0, 20.0)
+  Isn = [-I∞(vsn[i],args_temp)/Iscale(args_temp) for i in eachindex(vsn)]
+  return vsn, Isn
+end
+export sn
