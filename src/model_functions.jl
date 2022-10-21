@@ -1,37 +1,11 @@
-include("model_arguments.jl")
-
 using Roots, ForwardDiff, Setfield
 
-function a∞(v,A,Δ)
-  return 1/( 1+exp( -(v-A)/Δ ) )
-end
-export a∞
+include("model_arguments.jl")
+include("ml_functions.jl")
+include("wb_functions.jl")
 
-function ψa(v,ϕ,A,Δ)
-  return ϕ*cosh( (v-A)/(4*Δ) )
-end
-export ψa
-
-function ML_ncurrent((n,v),args)
-  @unpack An, Δn, ϕ = args
-  return (a∞(v,An,Δn)-n)*ψa(v,ϕ,An,Δn)
-end
-export ML_ncurrent
-
-function MLS_voltage((n,v),args)
-  @unpack C, EL, gL, Ef, gf, Am, Δm, Es, gs, Iext = args
-  return (gL*(EL-v)+gs*n*(Es-v)+gf*a∞(v,Am,Δm)*(Ef-v)+Iext)/C
-end
-export MLS_voltage
-
-function F(x, args::MLS_Param)
-  [ML_ncurrent(x,args), MLS_voltage(x,args)]
-end
 export F
-
-function I∞(v,args::Union{MLS_Param})
-  return MLS_voltage((a∞(v,args.An,args.Δn),v),args)*args.C
-end
+export soma_voltage
 export I∞
 
 function vfps(args)
@@ -39,7 +13,7 @@ function vfps(args)
 end
 export vfps
 
-function Iscale(args::Union{MLS_Param})
+function Iscale(args::Union{MLS_Param, WBS_Param})
   1
 end
 
@@ -51,3 +25,23 @@ function sn(args)
   return vsn, Isn
 end
 export sn
+
+function cusp(args::Union{MLS_Param, WBS_Param})
+  args_temp = setproperties(args, (gL=0.0, Iext=0.0))
+  f(v) = I∞(v,args_temp)
+  f1(v) = ForwardDiff.derivative(f,v)
+  f2(v) = ForwardDiff.derivative(f1,v)
+
+  vc = find_zeros(v->f2(v), -100.0, 20.0)
+  gc = f1.(vc)
+  # idx = findfirst(gc .> 0) # choose the first positive conductance?
+  Ic = zeros(length(gc))
+  for i in eachindex(gc)
+    args_temp = @set args.gL = gc[i]
+    Ic[i] = -I∞.(vc[i],Ref(args_temp))/Iscale(args_temp)
+  end
+  return vc, Ic, gc
+end
+export cusp
+
+export bt

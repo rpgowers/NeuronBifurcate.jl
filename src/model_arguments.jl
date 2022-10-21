@@ -1,6 +1,7 @@
 using Parameters
 
 abstract type ML_Model end
+abstract type WB_Model end
 
 @with_kw mutable struct MLS_Param <: ML_Model
     dims::Int64 = 2 # dimensions of the somatic compartment
@@ -19,3 +20,17 @@ abstract type ML_Model end
     ϕ::Float64 = 1/15
   end
   export ML_Model, MLS_Param
+
+  @with_kw mutable struct WBS_Param <: WB_Model
+    dims::Int64 = 3 # dimensions of the somatic compartment
+    C::Float64 = 1.0
+    gL::Float64 = 0.1
+    EL::Float64 = -65.0
+    gNa::Float64 = 35.0
+    ENa::Float64 = 55.0
+    gK::Float64 = 9.0
+    EK::Float64 = -90.0
+    ϕ::Float64 = 5.0
+    Iext::Float64 = 0.0
+  end
+  export WB_Model, WBS_Param
