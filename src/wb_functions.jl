@@ -29,19 +29,36 @@ function WB_heq((n,h,v),args)
   @unpack ϕ = args
   return (hinf(v)-h)/τh(v, ϕ)
 end
-  
-function soma_voltage((n,h,v),args::WBS_Param)
-  @unpack C, gL, EL, gNa, ENa, gK, EK, Iext = args
-  return (gL*(EL-v)+gNa*minf(v)^3*h*(ENa-v)+gK*n^4*(EK-v)+Iext)/C
+
+function Ia((n,h,v), args::WBS_Param)
+  @unpack gNa, ENa, gK, EK = args
+  gNa*minf(v)^3*h*(ENa-v)+gK*n^4*(EK-v)
 end
+
+function X∞(v,args::WBS_Param)
+  [ninf(v), hinf(v), v]
+end
+
+function dA∞(v,args::WBS_Param)
+  [dninf(v), dhinf(v)]
+end
+
+function τa(v,args::WBS_Param)
+  [τn(v, args.ϕ), τh(v, args.ϕ)]
+end
+  
+# function soma_voltage((n,h,v),args::WBS_Param)
+#   @unpack C, gL, EL, gNa, ENa, gK, EK, Iext = args
+#   return (gL*(EL-v)+gNa*minf(v)^3*h*(ENa-v)+gK*n^4*(EK-v)+Iext)/C
+# end
 
 function F(x, args::WBS_Param)
   [WB_neq(x,args), WB_heq(x,args), soma_voltage(x,args)]
 end
 
-function I∞(v,args::WBS_Param)
-  return soma_voltage((ninf(v),hinf(v),v),args)*args.C
-end
+# function I∞(v,args::WBS_Param)
+#   return soma_voltage((ninf(v),hinf(v),v),args)*args.C
+# end
 
 function ∂Ia∂n(v,args::WB_Model) # as evaluated at equilibrium
   @unpack C, EK, gK = args
@@ -53,16 +70,16 @@ function ∂Ia∂h(v,args::WB_Model) # as evaluated at equilibrium
   gNa*minf(v)^3*(ENa-v)
 end
 
-function bt(args::WBS_Param)
-  @unpack C, gNa, ENa, gK, EK, ϕ = args
-  vbt = find_zeros(v-> 1+τn(v,ϕ)*∂Ia∂n(v,args)*dninf(v)/C+τh(v,ϕ)*∂Ia∂h(v,args)*dhinf(v)/C , -80.0, 40.0)
-  args_temp = @set args.gL = 0.0
-  f2(v) = I∞(v,args_temp)
-  gbt = ForwardDiff.derivative.(f2, vbt)
-  Ibt = zeros(length(gbt))
-  for i in eachindex(vbt)
-    args_temp = setproperties(args, (gL=gbt[i], Iext=0.0))
-    Ibt[i] = -I∞(vbt[i],args_temp)/Iscale(args_temp)
-  end
-  return vbt, Ibt, gbt
-end
+# function bt(args::WBS_Param)
+#   @unpack C, gNa, ENa, gK, EK, ϕ = args
+#   vbt = find_zeros(v-> 1+τn(v,ϕ)*∂Ia∂n(v,args)*dninf(v)/C+τh(v,ϕ)*∂Ia∂h(v,args)*dhinf(v)/C , -80.0, 40.0)
+#   args_temp = @set args.gL = 0.0
+#   f2(v) = I∞(v,args_temp)
+#   gbt = ForwardDiff.derivative.(f2, vbt)
+#   Ibt = zeros(length(gbt))
+#   for i in eachindex(vbt)
+#     args_temp = setproperties(args, (gL=gbt[i], Iext=0.0))
+#     Ibt[i] = -I∞(vbt[i],args_temp)/Iscale(args_temp)
+#   end
+#   return vbt, Ibt, gbt
+# end
