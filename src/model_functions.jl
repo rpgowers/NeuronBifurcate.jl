@@ -1,5 +1,7 @@
 using Roots, ForwardDiff, Setfield
 
+vtrap(A, x, y) = ( abs(x) > eps() ? A*x/expm1(x/y) : A*(y-x/2+x^2/(12*y)-x^4/(720*y^3)) ) # mirrors the vtrap used in the Allen model
+
 include("model_arguments.jl")
 include("ml_functions.jl")
 include("wb_functions.jl")
