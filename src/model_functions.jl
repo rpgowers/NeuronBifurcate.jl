@@ -12,6 +12,13 @@ function soma_voltage(x,args)
   return (gL*(EL-v)+Ia(x,args))/C
 end
 
+function vector_hessian(f, x)
+  n = length(x)
+  out = ForwardDiff.jacobian(x -> Matrix(transpose(ForwardDiff.jacobian(f, x))), x)
+  return reshape(Matrix(transpose(out)), n, n, n)
+end
+export vector_hessian
+
 function I∞(v,args::Union{MLS_Param, WBS_Param})
   return soma_voltage(X∞(v,args),args)*args.C+args.Iext
 end
@@ -115,3 +122,14 @@ function cusp(args::Union{MLDS_Param})
   return vc, Ic, ρc
 end
 export cusp
+
+function btc(args::Union{MLS_Param, WBS_Param})
+  @unpack dims = args
+  vbtc, Ibtc, gbtc = cusp(args)
+  F(x) = Ia(x, args)
+  ∇F(x) = ForwardDiff.gradient(F, x)
+  fbt(v) = sum(τa(v,args).*∇F(X∞(v,args))[1:dims-1].*dA∞(v,args))
+  Cbtc = -fbt.(vbtc)
+  return vbtc, Ibtc, gbtc, Cbtc
+end
+export btc
