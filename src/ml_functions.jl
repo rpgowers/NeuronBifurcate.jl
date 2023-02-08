@@ -11,6 +11,11 @@ function d2a∞(v,A,Δ) # this is just to compare against previous functions, de
   return 2*exp( -(v-A)/Δ )^2/Δ^2/( 1+exp( -(v-A)/Δ ) )^3-exp( -(v-A)/Δ )/Δ^2/( 1+exp( -(v-A)/Δ ) )^2
 end
 
+function d3a∞(v,A,Δ) # this is just to compare against previous functions, delete when no longer needed
+  val = 6*exp( -3*(v-A)/Δ )/( 1+exp( -(v-A)/Δ ) )^4-6*exp( -2*(v-A)/Δ )/( 1+exp( -(v-A)/Δ ) )^3+exp( -(v-A)/Δ )/( 1+exp( -(v-A)/Δ ) )^2
+  return val/Δ^3
+end
+
 function ψa(v,ϕ,A,Δ)
   return ϕ*cosh( (v-A)/(4*Δ) )
 end
@@ -89,21 +94,33 @@ function Bexp_old(x,y,v,args::ML_Model) # this is the old function for finding B
 end
 export Bexp_old
 
-function Bexp(x,y,v,args::ML_Model)
+function Bexp(x,y,v,args)
   @unpack dims = args
   f(X) = F(X,args)
   H = vector_hessian(f, X∞(v,args))
-  return [sum(H[i,j,k]*x[i]*y[j] for i in eachindex(x), j in eachindex(y)) for k=1:dims]
+  return [sum(H[k,i,j]*x[i]*y[j] for i in eachindex(x), j in eachindex(y)) for k=1:dims]
 end
 export Bexp
 
-function Cexp(x,y,z,v,args::ML_Model)
+function Cexp_old(x,y,z,v,args::ML_Model)
   @unpack C, gs, gf, Ef, Am, Δm, An, Δn, ϕ = args
-  Cn1 = (-3*d2ψa(v,ϕ,An,Δn)*da∞(v,An,Δn)-3*dψa(v,ϕ,An,Δn)*d2a∞(v,An,Δn)+d3a∞(v,An,Δn)*ψa(v,ϕ,An,Δn))*x[2]*y[2]*z[2]
-  Cn2 = -3*d2ψa(v,ϕ,An,Δn)*(x[2]*y[2]*z[1]+x[2]*y[1]*z[2]+x[1]*y[2]*z[2])
+  Cn1 = (+3*d2ψa(v,ϕ,An,Δn)*da∞(v,An,Δn)+3*dψa(v,ϕ,An,Δn)*d2a∞(v,An,Δn)+d3a∞(v,An,Δn)*ψa(v,ϕ,An,Δn))*x[2]*y[2]*z[2]
+  Cn2 = -d2ψa(v,ϕ,An,Δn)*(x[2]*y[2]*z[1]+x[2]*y[1]*z[2]+x[1]*y[2]*z[2])
+  # the older values below seem to have been slightly incorrect?
+  # Cn1 = (-3*d2ψa(v,ϕ,An,Δn)*da∞(v,An,Δn)-3*dψa(v,ϕ,An,Δn)*d2a∞(v,An,Δn)+d3a∞(v,An,Δn)*ψa(v,ϕ,An,Δn))*x[2]*y[2]*z[2]
+  # Cn2 = -3*d2ψa(v,ϕ,An,Δn)*(x[2]*y[2]*z[1]+x[2]*y[1]*z[2]+x[1]*y[2]*z[2])
   Cv = gf*(d3a∞(v,Am,Δm)*(Ef-v)-3*d2a∞(v,Am,Δm))/C*x[2]*y[2]*z[2]
   return [Cn1+Cn2, Cv]
 end
+export Cexp_old
+
+function Cexp(x,y,z,v,args)
+  @unpack dims = args
+  f(X) = F(X,args)
+  V = vector_hyper_hessian(f, X∞(v,args))
+  return [sum(V[i,j,k,l]*x[j]*y[k]*z[l] for j in eachindex(x), k in eachindex(y), l in eachindex(z) ) for i=1:dims ]
+end
+export Cexp
 
 function l1_coeff(p,q,B,C,ω,V,args)
   g20 = p'*B(q,q,V,args)
@@ -112,7 +129,7 @@ function l1_coeff(p,q,B,C,ω,V,args)
   real(1im*g20*g11+ω*g21)/(2*ω^2)
 end
 
-function hopf_stability(args::MLS_Param)
+function hopf_stability((nh, vh), ωh, args::MLS_Param)
   J = Jacobian([nh,vh],args)
   q = eigvecs(J)[:,2]
   p = eigvecs(Array(J'))[:,1]
@@ -120,3 +137,4 @@ function hopf_stability(args::MLS_Param)
   pn = -p./k 
   l1_coeff(pn,q,Bexp,Cexp,ωh,vh,args)
 end
+export hopf_stability

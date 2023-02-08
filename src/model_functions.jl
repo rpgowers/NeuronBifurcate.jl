@@ -1,4 +1,4 @@
-using Roots, ForwardDiff, Setfield
+using Roots, ForwardDiff, Setfield, LinearAlgebra
 
 vtrap(A, x, y) = ( abs(x) > eps() ? A*x/expm1(x/y) : A*(y-x/2+x^2/(12*y)-x^4/(720*y^3)) ) # mirrors the vtrap used in the Allen model
 
@@ -14,10 +14,20 @@ end
 
 function vector_hessian(f, x)
   n = length(x)
-  out = ForwardDiff.jacobian(x -> Matrix(transpose(ForwardDiff.jacobian(f, x))), x)
-  return reshape(Matrix(transpose(out)), n, n, n)
+  # out = ForwardDiff.jacobian(x -> Matrix(transpose(ForwardDiff.jacobian(f, x))), x)
+  # return reshape(Matrix(transpose(out)), n, n, n)
+  out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
+  return reshape(out, n, n, n)
 end
 export vector_hessian
+
+function vector_hyper_hessian(f, x)
+  n = length(x)
+  H(X) =  ForwardDiff.jacobian(X -> ForwardDiff.jacobian(f, X), X)
+  out = ForwardDiff.jacobian(x -> H(x), x)
+  return reshape(out, n, n, n, n)
+end
+export vector_hyper_hessian
 
 function I∞(v,args::Union{MLS_Param, WBS_Param})
   return soma_voltage(X∞(v,args),args)*args.C+args.Iext
@@ -66,6 +76,11 @@ export soma_voltage
 export I∞
 export bt
 export hopf
+
+function Jacobian(x,args)
+  f((x)) = F(x,args)
+  J = ForwardDiff.jacobian(X -> f(X), x)
+end
 
 function vfps(args)
   vfp = find_zeros(v->I∞(v,args), -120.0, 50.0)
