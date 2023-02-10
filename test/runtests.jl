@@ -6,8 +6,8 @@ using Test
     args_mls = MLS_Param()
     v = -50.0
     n = 0.1
-    @test a∞(v, args_mls.An, args_mls.Δn) > 0
-    @test ψa(v, args_mls.ϕ, args_mls.An, args_mls.Δn) > 0
+    @test a∞(v, args_mls.An, args_mls.Δn) > 0.0 # can't have negative gating variable values
+    @test ψa(v, args_mls.ϕ, args_mls.An, args_mls.Δn) > 0.0 # can't have negative inverse time constants
     @test ML_ncurrent((n,v),args_mls) > -Inf
     @test soma_voltage((n,v),args_mls) > -Inf
     @test length(F((n,v), args_mls)) == 2
@@ -16,7 +16,9 @@ using Test
     @test length(sn(args_mls)[1]) == 2
     @test cusp(args_mls)[3][1] > 0.0
     @test bt(args_mls)[3][1] > 0.0
-    @test hopf(args_mls)[3][2] > 0.0
+    vh, Ih, ωh = hopf(args_mls)
+    @test ωh[2] > 0.0
+    @test hopf_stability((a∞(vh[2], args_mls.An, args_mls.Δn), vh[2]), ωh[2], args_mls) > 0.0 # this hopf bifurcation should be subcritical
 
     args_wbs = WBS_Param()
     v = -50.0
