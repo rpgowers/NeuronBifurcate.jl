@@ -1,4 +1,4 @@
-using Roots, ForwardDiff, Setfield, LinearAlgebra
+using Roots, ForwardDiff, Setfield, LinearAlgebra, NLsolve
 
 vtrap(A, x, y) = ( abs(x) > eps() ? A*x/expm1(x/y) : A*(y-x/2+x^2/(12*y)-x^4/(720*y^3)) ) # mirrors the vtrap used in the Allen model
 
@@ -33,7 +33,7 @@ function I∞(v,args::Union{MLS_Param, WBS_Param})
   return soma_voltage(X∞(v,args),args)*args.C+args.Iext
 end
 
-function I∞(v, args::Union{MLDS_Param})
+function I∞(v, args::Union{MLDS_Param, WBDS_Param})
   @unpack C, ρ, xin, λ, gL, EL, Iext = args
   return soma_voltage(X∞(v,args),args)*C+ρ*gL*(EL-v)+Iext*exp(-xin/λ)
 end
@@ -55,7 +55,7 @@ function bt(args::Union{MLS_Param, WBS_Param})
   return vbt, Ibt, gbt
 end
 
-function bt(args::Union{MLDS_Param})
+function bt(args::Union{MLDS_Param, WBDS_Param})
   @unpack C, gL, τδ, dims = args
   F(x) = Ia(x, args)
   ∇F(x) = ForwardDiff.gradient(F, x)
@@ -91,7 +91,7 @@ function Iscale(args::Union{MLS_Param, WBS_Param})
   1
 end
 
-function Iscale(args::Union{MLDS_Param})
+function Iscale(args::Union{MLDS_Param, WBDS_Param})
   @unpack xin, λ = args
   exp(-xin/λ)
 end
@@ -121,7 +121,7 @@ function cusp(args::Union{MLS_Param, WBS_Param})
   return vc, Ic, gc
 end
 
-function cusp(args::Union{MLDS_Param})
+function cusp(args::Union{MLDS_Param, WBDS_Param})
   args_temp = setproperties(args, (ρ=0.0, Iext=0.0))
   f(v) = I∞(v,args_temp)
   f1(v) = ForwardDiff.derivative(f,v)
@@ -146,5 +146,15 @@ function btc(args::Union{MLS_Param, WBS_Param})
   fbt(v) = sum(τa(v,args).*∇F(X∞(v,args))[1:dims-1].*dA∞(v,args))
   Cbtc = -fbt.(vbtc)
   return vbtc, Ibtc, gbtc, Cbtc
+end
+
+function btc(args::Union{MLDS_Param, WBDS_Param})
+  @unpack C, gL, dims = args
+  vbtc, Ibtc, ρbtc = cusp(args)
+  F(x) = Ia(x, args)
+  ∇F(x) = ForwardDiff.gradient(F, x)
+  τbt(v) = -2*( C+sum( τa(v,args).*∇F(X∞(v,args))[1:dims-1].*dA∞(v,args) ) )/( -gL+∇F(X∞(v,args))[end]+ sum( ∇F(X∞(v,args))[1:dims-1].*dA∞(v,args) ) )
+  τbtc = τbt.(vbtc)
+  return vbtc, Ibtc, ρbtc, τbtc
 end
 export btc

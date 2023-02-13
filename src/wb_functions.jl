@@ -81,24 +81,24 @@ function WB_heq((n,h,v),args)
   return (hinf(v)-h)/τh(v, ϕ)
 end
 
-function Ia((n,h,v), args::WBS_Param)
+function Ia((n,h,v), args::WB_Model)
   @unpack gNa, ENa, gK, EK = args
   gNa*minf(v)^3*h*(ENa-v)+gK*n^4*(EK-v)
 end
 
-function X∞(v,args::WBS_Param)
+function X∞(v,args::WB_Model)
   [ninf(v), hinf(v), v]
 end
 
-function dA∞(v,args::WBS_Param)
+function dA∞(v,args::WB_Model)
   [dninf(v), dhinf(v)]
 end
 
-function τa(v,args::WBS_Param)
+function τa(v,args::WB_Model)
   [τn(v, args.ϕ), τh(v, args.ϕ)]
 end
   
-function F(x, args::WBS_Param)
+function F(x, args::WB_Model)
   [WB_neq(x,args), WB_heq(x,args), soma_voltage(x,args)]
 end
 
