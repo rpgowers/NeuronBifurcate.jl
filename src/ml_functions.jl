@@ -90,11 +90,15 @@ z(ω, τδ) = sqrt(2+2*sqrt(1+ω^2*τδ^2))
 u(ω, τδ) = sign(ω)*sqrt(-2+2*sqrt(1+ω^2*τδ^2))
 
 function hopf(args::MLDS_Param; v0 =-10.0, ω0=0.05, ωtol = 1e-3)
-  @unpack Δn, An, ϕ, τδ, C, gL, ρ, Am, Δm, An, Δn = args
+  @unpack dims, Δn, An, ϕ, τδ, C, gL, ρ, Am, Δm, An, Δn = args
+  F(x) = Ia(x, args)
+  ∇F(x) = ForwardDiff.gradient(F, x)
 
   function MLDS_hopftest!(F, (v, ω))
-    F[1] = ∂f∂n(v,args)*da∞(v,An,Δn)*ψa(v,ϕ,An,Δn)^2/(ψa(v,ϕ,An,Δn)^2+ω^2)+∂f∂v(v,args)-0.5*z(ω, τδ)*ρ*gL/C
-    F[2] = -∂f∂n(v,args)*da∞(v,An,Δn)*ψa(v,ϕ,An,Δn)/(ψa(v,ϕ,An,Δn)^2+ω^2)-1-0.5*u(ω, τδ)*ρ*gL/(C*ω)
+    F[1] = -gL+∇F(X∞(v,args))[end]-0.5*z(ω, τδ)*ρ*gL+sum( ∇F(X∞(v,args))[1:dims-1].*dA∞(v,args)./(1 .+ω^2 .*τa(v,args).^2 ) )
+    F[2] = -C-0.5*u(ω, τδ)*ρ*gL/ω-sum( ∇F(X∞(v,args))[1:dims-1].*dA∞(v,args).*τa(v,args)./(1 .+ω^2 .*τa(v,args).^2 ) )
+    # F[1] = ∂f∂n(v,args)*da∞(v,An,Δn)*ψa(v,ϕ,An,Δn)^2/(ψa(v,ϕ,An,Δn)^2+ω^2)+∂f∂v(v,args)-0.5*z(ω, τδ)*ρ*gL/C
+    # F[2] = -∂f∂n(v,args)*da∞(v,An,Δn)*ψa(v,ϕ,An,Δn)/(ψa(v,ϕ,An,Δn)^2+ω^2)-1-0.5*u(ω, τδ)*ρ*gL/(C*ω)
   end
   output = nlsolve(MLDS_hopftest!, [v0;ω0], autodiff = :forward, ftol=1e-8)
   vh = output.zero[1]
