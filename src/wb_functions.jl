@@ -69,6 +69,9 @@ function d3ninf(v)
   return ((αn(v)+βn(v))*(t1+t2)+t3)/(αn(v)+βn(v))^4
 end
 
+export ninf
+export hinf
+
 ## should be able to strip out most of the above eventually
 
 function WB_neq((n,h,v),args)
@@ -110,6 +113,45 @@ end
 function ∂Ia∂h(v,args::WB_Model) # as evaluated at equilibrium
   @unpack C, ENa, gNa = args
   gNa*minf(v)^3*(ENa-v)
+end
+
+function ∂f∂v(v,args::WB_Model)
+  @unpack C, gL, gNa, ENa, gK = args
+  return (-gL-gK*ninf(v)^4+gNa*hinf(v)*(-minf(v)^3+3*minf(v)^2*dminf(v)*(ENa-v)))/C
+end
+
+function ∂f∂n(v,args::WB_Model)
+  @unpack C, EK, gK = args
+  4*gK*ninf(v)^3*(EK-v)/C
+end
+
+function ∂f∂h(v,args::WB_Model)
+  @unpack C, ENa, gNa = args
+  gNa*minf(v)^3*(ENa-v)/C
+end
+
+function hopf(args::WBS_Param)
+  @unpack C, ϕ = args
+
+  a(v) = τn(v,ϕ)^2*τh(v,ϕ)^2
+  b(v) = τn(v,ϕ)*τh(v,ϕ)^2*∂f∂n(v,args)*dninf(v)+τh(v,ϕ)*τn(v,ϕ)^2*∂f∂h(v,args)*dhinf(v)+τn(v,ϕ)^2+τh(v,ϕ)^2
+  c(v) = τn(v,ϕ)*∂f∂n(v,args)*dninf(v)+τh(v,ϕ)*∂f∂h(v,args)*dhinf(v)+1
+  Ω(v) = (-b(v)+sqrt(b(v)^2-4*a(v)*c(v)))/(2*a(v))
+  F(v) = (1+Ω(v)*τh(v,ϕ)^2)*∂f∂n(v,args)*dninf(v)+(1+Ω(v)*τn(v,ϕ)^2)*∂f∂h(v,args)*dhinf(v)+(1+Ω(v)*τn(v,ϕ)^2)*(1+Ω(v)*τh(v,ϕ)^2)*∂f∂v(v,args)
+  vin = find_zeros(v->F(v), -80.0, 60.0) # initial values of vh
+  vh = NaN.*ones(length(vin))
+  ωh = NaN.*ones(length(vin))
+  Ih = NaN.*ones(length(vin))
+  for i in eachindex(vin)
+    Ωin = Ω(vin[i])
+    args_temp = @set args.Iext = 0.0
+    if Ωin > 0.0
+      vh[i] = vin[i]
+      ωh[i] = sqrt(Ωin)
+      Ih[i] = -I∞(vh[i], args_temp)
+    end
+  end
+  return vh, Ih, ωh
 end
 
 function Bexp_old(x,y,v,args::WB_Model)

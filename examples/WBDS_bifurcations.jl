@@ -13,45 +13,52 @@ function hopf_finder(v0, ω0, args; ωtol=1e-3, vtol=1e-2)
 end
 
 function hopfstab_finder(xh,ωh,Ih,args)
-  Sh = [0.0, 0.0]
-  if Ih[1] > -Inf
-    Sh[1] = hopf_stability(xh[1],ωh[1],args)
-  end
-  if Ih[2] > -Inf
-    Sh[2] = hopf_stability(xh[2],ωh[2],args)
-  end
+  Sh = [1.0, 1.0]
+  # if Ih[1] > -Inf
+  #   Sh[1] = hopf_stability(xh[1],ωh[1],args)
+  # end
+  # if Ih[2] > -Inf
+  #   Sh[2] = hopf_stability(xh[2],ωh[2],args)
+  # end
   return Sh
 end
 
-gin = 2.0:0.05:9.0
-gσ = 2.0
+gin = 0.1:0.01:1.5
+gσ = 0.1
 ρ = gin./gσ .-1
 
-τδ = [2.5, 5.0, 10.0, 20.0]
+τδ = [1.0, 2.5, 5.0, 10.0]
 
 Isn = zeros(length(gin),2)
 Ih = zeros(length(τδ), length(gin), 2)
 Sh = zeros(length(τδ), length(gin), 2)
 ωh = zeros(length(τδ), length(gin), 2)
+vbt = zeros(length(τδ))
 Ibt = zeros(length(τδ))
 gbt = zeros(length(τδ))
 
-vc, Ic, ρc = cusp(MLDS_Param())
+vc, Ic, ρc = cusp(WBDS_Param())
 gc = gσ.*(1 .+ρc)
 
 
 hstop = 0
 for j in eachindex(τδ)
   global hstop = 0
-  vbt, Ibt[j], ρbt = [bt(MLDS_Param(τδ=τδ[j]))[k][1] for k=1:3]
+  vbt[j], Ibt[j], ρbt = [bt(WBDS_Param(τδ=τδ[j]))[k][1] for k=1:3]
   gbt[j] = gσ*(1+ρbt)
   for i in eachindex(gin)
-    args = MLDS_Param(gL=gσ, ρ=ρ[i], τδ=τδ[j])
+    args = WBDS_Param(gL=gσ, ρ=ρ[i], τδ=τδ[j])
     vout, Iout = sn(args)
     length(vout) > 1 ? Isn[i,:] .= Iout[1:2] : Isn[i,:] .= NaN
     if hstop == 0
-      Ih[j,i,:], ωh[j,i,:], vh, hstop = hopf_finder([vbt, 10.0], [0.05, 0.05], args; ωtol=1e-3, vtol=1e-2)
-      Sh[j,i,:] .= hopfstab_finder([(a∞(vh[1],args.An,args.Δn), vh[1]), (a∞(vh[2],args.An,args.Δn), vh[2])], ωh[j,i,:],Ih[j,i,:],args)
+      if gin[i] > gbt[j]
+        Ih[j,i,:], ωh[j,i,:], vh, hstop = hopf_finder([vbt[j], -30.0], [1.5e-2, 1.7], args; ωtol=-Inf, vtol=1e-2)
+        Sh[j,i,:] .= hopfstab_finder([(ninf(vh[1]), hinf(vh[1]), vh[1]), (ninf(vh[2]), hinf(vh[2]), vh[2])], ωh[j,i,:],Ih[j,i,:],args)
+      else
+        Ih[j,i,1] = NaN
+        vh, Ih[j,i,2], ωh[j,i,2] = hopf(args; v0=-30.0, ω0=1.7, ωtol = 0.0)
+        Sh[j,i,2] = 1.0
+      end
     else
       Ih[j,i,:] .= NaN
     end

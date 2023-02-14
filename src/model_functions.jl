@@ -14,8 +14,6 @@ end
 
 function vector_hessian(f, x)
   n = length(x)
-  # out = ForwardDiff.jacobian(x -> Matrix(transpose(ForwardDiff.jacobian(f, x))), x)
-  # return reshape(Matrix(transpose(out)), n, n, n)
   out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
   return reshape(out, n, n, n)
 end
@@ -74,8 +72,12 @@ end
 export F
 export soma_voltage
 export I∞
+export X∞
 export bt
 export hopf
+export τa
+export dA∞
+export Ia
 
 function Jacobian(x,args)
   f((x)) = F(x,args)
@@ -158,3 +160,47 @@ function btc(args::Union{MLDS_Param, WBDS_Param})
   return vbtc, Ibtc, ρbtc, τbtc
 end
 export btc
+
+z(ω, τδ) = sqrt(2+2*sqrt(1+ω^2*τδ^2))
+# u(ω, τδ) = sign(ω)*sqrt(-2+2*sqrt(1+ω^2*τδ^2)) # we never actually want ω to be negative so do we need the sign?
+u(ω, τδ) = sqrt(-2+2*sqrt(1+ω^2*τδ^2))
+
+
+function hopf(args::Union{MLDS_Param, WBDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 1e-3)
+  @unpack dims, τδ, C, gL, ρ = args
+  F(x) = Ia(x, args)
+  ∇F(x) = ForwardDiff.gradient(F, x)
+
+  function DS_hopftest!(F, (v, ω))
+    F[1] = -gL+∇F(X∞(v,args))[end]-0.5*z(ω, τδ)*ρ*gL+sum( ∇F(X∞(v,args))[1:dims-1].*dA∞(v,args)./(1 .+ω^2 .*τa(v,args).^2 ) )
+    F[2] = C+0.5*u(ω, τδ)*ρ*gL/ω+sum( ∇F(X∞(v,args))[1:dims-1].*dA∞(v,args).*τa(v,args)./(1 .+ω^2 .*τa(v,args).^2 ) )
+    # F[1] = ∂f∂n(v,args)*da∞(v,An,Δn)*ψa(v,ϕ,An,Δn)^2/(ψa(v,ϕ,An,Δn)^2+ω^2)+∂f∂v(v,args)-0.5*z(ω, τδ)*ρ*gL/C
+    # F[2] = -∂f∂n(v,args)*da∞(v,An,Δn)*ψa(v,ϕ,An,Δn)/(ψa(v,ϕ,An,Δn)^2+ω^2)-1-0.5*u(ω, τδ)*ρ*gL/(C*ω)
+  end
+  output = nlsolve(DS_hopftest!, [v0;ω0], autodiff = :forward, ftol=1e-8)
+  vh = output.zero[1]
+  ωh = output.zero[2]
+  if ωh < ωtol
+    vh = NaN
+    Ih = NaN
+  else
+    args_temp = @set args.Iext = 0.0
+    Ih = -I∞(vh,args_temp)
+  end
+  return vh, Ih, ωh
+end
+export hopf
+
+function hopf_stability(v, ωh, args::Union{WBDS_Param})
+  @unpack gL, ρ, C, τδ, dims = args
+  χ = ρ*gL/C
+  f(x) = Ia(x,args)/C
+  ∇f(x) = ForwardDiff.gradient(f, x)
+  # println(X∞(v,args))
+
+  #calculation of F
+  qσ = 1.0
+  γ = sqrt(1+1im*ωh*τδ)
+  κ = 1+χ*τδ/(2*γ)+sum( ∇f(X∞(v,args))[1:dims-1].*dA∞(v,args).*τa(v,args)./(1 .+1im*ωh*τa(v,args)).^2 )
+  println(κ)
+end
