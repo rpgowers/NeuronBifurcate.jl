@@ -148,7 +148,7 @@ function ∂f∂n(v,args::Union{ML_Model})
   gs*(Es-v)/C
 end
 
-function hopf_stability((nfp,vfp),ωh,args::MLDS_Param)
+function hopf_stability_old((nfp,vfp),ωh,args::MLDS_Param)
   @unpack gL, ρ, C, τδ, ϕ, An, Δn = args
   τa = 1/ψa(vfp,ϕ,An,Δn)
   qσ = 1
@@ -158,6 +158,7 @@ function hopf_stability((nfp,vfp),ωh,args::MLDS_Param)
   pa = pσ*τa*∂f∂n(vfp,args)/(1+1im*ωh*τa)
   Ca, Cσ = Cexp([qa,qσ],[qa,qσ],[conj(qa),qσ],vfp,args)
   F = pa*Ca+pσ*Cσ
+  # println(F)
 
   Bau, Bσu = Bexp([qa,qσ],[conj(qa),qσ],vfp,args)
   a1 = -ψa(vfp,ϕ,An,Δn)
@@ -174,6 +175,7 @@ function hopf_stability((nfp,vfp),ωh,args::MLDS_Param)
   uσ = J21*Bau+J22*Bσu
   Ba2, Bσ2 = Bexp([qa,qσ],[ua,uσ],vfp,args)
   G = 2*(pa*Ba2+pσ*Bσ2)
+  # println(G)
 
   Bay, Bσy = Bexp([qa,qσ],[qa,qσ],vfp,args)
   ω = 2*ωh
@@ -181,14 +183,17 @@ function hopf_stability((nfp,vfp),ωh,args::MLDS_Param)
   Den = -b1*c1*γ+(a1-1im*ω)*( (a2-1im*ω)*γ-x*(1+1im*ω*τδ) )
   K11 = ( (a2-1im*ω)*γ-x*(1+1im*ω*τδ) )/Den
   ϕ3θM2 = γ/Den
+  println(a2)
   K12 = -b1*ϕ3θM2
   K21 = -c1*ϕ3θM2
   K22 = (a1-1im*ω)*ϕ3θM2
+  display([K11 K12; K21 K22])
   ya = -(K11*Bay+K12*Bσy)
   yσ = -(K21*Bay+K22*Bσy)
   Ba3, Bσ3 = Bexp([conj(qa), qσ],[ya,yσ],vfp,args)
   H = pa*Ba3+pσ*Bσ3
+  # println(H)
   real(F-G+H)/(2*ωh)
 end
 
-export hopf_stability
+# export hopf_stability_old

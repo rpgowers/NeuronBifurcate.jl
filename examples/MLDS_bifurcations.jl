@@ -12,13 +12,13 @@ function hopf_finder(v0, ω0, args; ωtol=1e-3, vtol=1e-2)
   return [Ihl, Ihu], [ωhl, ωhu], [vhl, vhu], hstop
 end
 
-function hopfstab_finder(xh,ωh,Ih,args)
+function hopfstab_finder(vh, ωh, Ih,args)
   Sh = [0.0, 0.0]
   if Ih[1] > -Inf
-    Sh[1] = hopf_stability(xh[1],ωh[1],args)
+    Sh[1] = hopf_stability(vh[1],ωh[1],args)
   end
   if Ih[2] > -Inf
-    Sh[2] = hopf_stability(xh[2],ωh[2],args)
+    Sh[2] = hopf_stability(vh[2],ωh[2],args)
   end
   return Sh
 end
@@ -51,7 +51,7 @@ for j in eachindex(τδ)
     length(vout) > 1 ? Isn[i,:] .= Iout[1:2] : Isn[i,:] .= NaN
     if hstop == 0
       Ih[j,i,:], ωh[j,i,:], vh, hstop = hopf_finder([vbt, 10.0], [0.05, 0.05], args; ωtol=1e-3, vtol=1e-2)
-      Sh[j,i,:] .= hopfstab_finder([(a∞(vh[1],args.An,args.Δn), vh[1]), (a∞(vh[2],args.An,args.Δn), vh[2])], ωh[j,i,:],Ih[j,i,:],args)
+      Sh[j,i,:] .= hopfstab_finder([vh[1], vh[2]], ωh[j,i,:],Ih[j,i,:],args)
     else
       Ih[j,i,:] .= NaN
     end

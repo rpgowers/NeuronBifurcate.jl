@@ -46,7 +46,7 @@ using Test
     @test bt(args_mlds)[3][1] > 0.0
     vh, Ih, ωh = hopf(args_mlds; v0=10.0)
     @test ωh > 0.0 # hopf frequency should be above zero
-    @test hopf_stability((a∞(vh, args_mls.An, args_mls.Δn), vh), ωh, args_mlds) > 0.0 # this hopf bifurcation should be subcritical
+    @test hopf_stability(vh, ωh, args_mlds) > 0.0 # this hopf bifurcation should be subcritical
     @test btc(args_mls)[4][1] > 0.0 # time constant of btc should be non-negative
 
     args_wbds = WBDS_Param(ρ=1.0)
@@ -60,6 +60,9 @@ using Test
     @test length(sn(args_wbds)[1]) == 2
     @test cusp(args_wbds)[3][1] > 0.0
     @test bt(args_wbds)[3][1] > 0.0
+    vh, Ih, ωh = hopf(args_wbds; v0=-30.0, ω0=1.7)
+    @test ωh > 0.0 # hopf frequency should be above zero
+    @test hopf_stability(vh, ωh, args_wbds) < 0.0 # this hopf bifurcation should be supercritical
     @test btc(args_wbds)[4][1] > 0.0 # time constant of btc should be non-negative
 
 end

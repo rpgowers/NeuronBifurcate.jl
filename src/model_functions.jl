@@ -191,16 +191,46 @@ function hopf(args::Union{MLDS_Param, WBDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 
 end
 export hopf
 
-function hopf_stability(v, ωh, args::Union{WBDS_Param})
+function hopf_stability(v, ωh, args::Union{MLDS_Param, WBDS_Param})
   @unpack gL, ρ, C, τδ, dims = args
   χ = ρ*gL/C
   f(x) = Ia(x,args)/C
   ∇f(x) = ForwardDiff.gradient(f, x)
-  # println(X∞(v,args))
 
   #calculation of F
   qσ = 1.0
   γ = sqrt(1+1im*ωh*τδ)
   κ = 1+χ*τδ/(2*γ)+sum( ∇f(X∞(v,args))[1:dims-1].*dA∞(v,args).*τa(v,args)./(1 .+1im*ωh*τa(v,args)).^2 )
-  println(κ)
+  q = vcat(dA∞(v,args)./(1 .+1im*ωh*τa(v,args)), [1.0])
+  p = vcat(∇f(X∞(v,args))[1:dims-1].*τa(v,args)./(1 .+1im*ωh*τa(v,args)), [1.0])./κ
+  Cvec = Cexp(q,q,conj.(q),v,args)
+  F = conj(p)'Cvec
+  # println(F)
+
+  # calculation of G
+  α = sum(∇f(X∞(v,args))[1:dims-1].*dA∞(v,args))+∇f(X∞(v,args))[end]-gL/C
+  S = 1/(α-χ)
+  J = S.*vcat(dA∞(v,args), [1.0])*vcat(∇f(X∞(v,args))[1:dims-1].*τa(v,args), [1.0])'+Diagonal( -vcat( τa(v,args), [0.0] ) )
+  # display(J)
+  Bu = Bexp(q, conj.(q), v, args)
+  u = J*Bu
+  B2 = Bexp(q, u, v, args)
+  G = 2*conj(p)'*B2
+  # println(G)
+  
+  # calculation of H
+  Ω = 2*ωh
+  Γ = sqrt(1+1im*Ω*τδ)
+  α1 = sum( ∇f(X∞(v,args))[1:dims-1].*dA∞(v,args)./(1 .+ 1im*Ω*τa(v,args)) )+∇f(X∞(v,args))[end]-gL/C
+  S1 = 1/(α1-1im*Ω-Γ*χ)
+  By = Bexp(q,q,v,args)
+  Ta = τa(v,args)./(1 .+ 1im*Ω*τa(v,args))
+  K = S1.*vcat(Ta.*dA∞(v,args)./τa(v,args), [1.0])*conj(vcat(Ta.*∇f(X∞(v,args))[1:dims-1], [1.0]))'+Diagonal( -vcat( Ta, [0.0] ) )
+  # display(K)
+  y = -K*By
+  B3 = Bexp(y, conj(q), v, args)
+  H = conj(p)'*B3
+  # println(H)
+  return real(F-G+H)/(2*ωh) 
 end
+export hopf_stability
