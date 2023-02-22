@@ -69,18 +69,17 @@ function bt(args::Union{MLDS_Param, WBDS_Param})
   return vbt, Ibt, ρbt
 end
 
-export F
+export Fσ_dyn
 export soma_voltage
 export I∞
 export X∞
 export bt
 export hopf
 export τa
-export dA∞
 export Ia
 
 function Jacobian(x,args)
-  f((x)) = F(x,args)
+  f((x)) = Fσ_dyn(x,args)
   J = ForwardDiff.jacobian(X -> f(X), x)
 end
 
@@ -190,6 +189,22 @@ function hopf(args::Union{MLDS_Param, WBDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 
   return vh, Ih, ωh
 end
 export hopf
+
+function Bexp(x,y,v,args)
+  @unpack dims = args
+  f(X) = Fσ_dyn(X,args)
+  H = vector_hessian(f, X∞(v,args))
+  return [sum(H[k,i,j]*x[i]*y[j] for i in eachindex(x), j in eachindex(y)) for k=1:dims]
+end
+export Bexp
+
+function Cexp(x,y,z,v,args)
+  @unpack dims = args
+  f(X) = Fσ_dyn(X,args)
+  V = vector_hyper_hessian(f, X∞(v,args))
+  return [sum(V[i,j,k,l]*x[j]*y[k]*z[l] for j in eachindex(x), k in eachindex(y), l in eachindex(z) ) for i=1:dims ]
+end
+export Cexp
 
 function hopf_stability(v, ωh, args::Union{MLDS_Param, WBDS_Param})
   @unpack gL, ρ, C, τδ, dims = args

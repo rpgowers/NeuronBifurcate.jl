@@ -10,7 +10,7 @@ using Test
     @test ψa(v, args_mls.ϕ, args_mls.An, args_mls.Δn) > 0.0 # can't have negative inverse time constants
     @test ML_ncurrent((n,v),args_mls) > -Inf
     @test soma_voltage((n,v),args_mls) > -Inf
-    @test length(F((n,v), args_mls)) == 2
+    @test length(Fσ_dyn((n,v), args_mls)) == 2
     @test I∞(v,args_mls) > -Inf
     @test length(vfps(args_mls)) == 3
     @test length(sn(args_mls)[1]) == 2
@@ -18,7 +18,7 @@ using Test
     @test bt(args_mls)[3][1] > 0.0
     vh, Ih, ωh = hopf(args_mls)
     @test ωh[2] > 0.0
-    @test hopf_stability((a∞(vh[2], args_mls.An, args_mls.Δn), vh[2]), ωh[2], args_mls) > 0.0 # this hopf bifurcation should be subcritical
+    @test hopf_stability(vh[2], ωh[2], args_mls) > 0.0 # this hopf bifurcation should be subcritical
     @test btc(args_mls)[4][1] > 0.0 # capacitance of btc should be non-negative
 
     args_wbs = WBS_Param()
@@ -27,12 +27,15 @@ using Test
     h = 0.2
 
     @test soma_voltage((n,h,v),args_wbs) > -Inf
-    @test length(F((n,h,v), args_wbs)) == 3
+    @test length(Fσ_dyn((n,h,v), args_wbs)) == 3
     @test I∞(v,args_wbs) > -Inf
     @test length(vfps(args_wbs)) == 3
     @test length(sn(args_wbs)[1]) == 2
     @test cusp(args_wbs)[3][1] > 0.0
     @test bt(args_wbs)[3][1] > 0.0
+    vh, Ih, ωh = hopf(args_wbs)
+    @test ωh[2] > 0.0
+    @test hopf_stability(vh[2], ωh[2], args_wbs) < 0.0 # this hopf bifurcation should be supercritical
     @test btc(args_wbs)[4][1] > 0.0 # capacitance of btc should be non-negative
 
     args_mlds = MLDS_Param(ρ = 1.0)
