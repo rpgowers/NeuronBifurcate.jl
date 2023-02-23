@@ -7,9 +7,9 @@ include("ml_functions.jl")
 include("wb_functions.jl")
 
 function soma_voltage(x,args)
-  @unpack C, EL, gL = args
+  @unpack C, EL, gL, Iext = args
   v = x[end]
-  return (gL*(EL-v)+Ia(x,args))/C
+  return (gL*(EL-v)+Ia(x,args)+Iext)/C
 end
 
 function vector_hessian(f, x)
@@ -34,6 +34,20 @@ end
 function I∞(v, args::Union{MLDS_Param, WBDS_Param})
   @unpack C, ρ, xin, λ, gL, EL, Iext = args
   return soma_voltage(X∞(v,args),args)*C+ρ*gL*(EL-v)+Iext*exp(-xin/λ)
+end
+
+function Dax(args::Union{MLMDS_Param})
+  @unpack λ, L, M = args
+  Δx = L/M
+  Λ = λ^2/Δx^2
+  μp = ((1+2*Λ)+sqrt(1+4*Λ))/(2*Λ)
+  μm = ((1+2*Λ)-sqrt(1+4*Λ))/(2*Λ)
+  return -((μm-1)*(μp^(M+1)-μp^(M-1))-(μp-1)*(μm^(M+1)-μm^(M-1)))/((μp^(M+1)-μp^(M-1))-(μm^(M+1)-μm^(M-1)))
+end
+
+function I∞(v,args::Union{MLMDS_Param})
+  @unpack C, gL, EL, ρ, M, L, λ = args
+  return soma_voltage(X∞(v,args),args)*C+gL*ρ*(EL-v)*M*λ*Dax(args)/L
 end
 
 function bt(args::Union{MLS_Param, WBS_Param})
@@ -78,6 +92,67 @@ export hopf
 export τa
 export Ia
 
+function fax((vσ, vδ), args::Union{MLMDS_Param}) # discretised axial current derivative
+  @unpack ρ, gL, λ, C, L, M = args
+  dx = L/M
+  ρ*gL*λ*(vδ-vσ)/(dx*C)
+end
+
+function fδ((vm,v0,vp),args::Union{MLMDS_Param})
+  @unpack M, L, λ, τδ, EL = args
+  dx = L/M
+  Λ = λ^2/dx^2
+  (EL-v0+Λ*(vp-2*v0+vm))/τδ
+end
+
+function fseal((vm, v0), args::Union{MLMDS_Param})
+  @unpack M, L, λ, τδ, EL = args
+  dx = L/M
+  Λ = λ^2/dx^2
+  (EL-v0+2*Λ*(vm-v0))/τδ
+end
+
+function Fall_dyn(x,args::Union{MLS_Param, WBS_Param})
+  return Fσ_dyn(x,args)
+end
+
+function Fall_dyn(x,args::Union{MLMDS_Param})
+  @unpack M, dims = args
+  out = zeros(dims+M)
+  out[1:dims] .= Fσ_dyn(x[1:dims],args)
+  out[dims] += fax(x[dims:dims+1], args)
+  for i=dims+1:M+(dims-1)
+    out[i] = fδ((x[i-1], x[i], x[i+1]), args)
+  end
+  out[M+dims] = fseal((x[M+(dims-1)], x[M+dims]), args)
+  return out
+end
+export Fall_dyn
+
+function discrete_rho(gin, args::Union{MLMDS_Param})
+  @unpack λ, L, M, gL = args
+  Δx = L/M
+  Λ = λ^2/Δx^2
+  μp = ((1+2*Λ)+sqrt(1+4*Λ))/(2*Λ)
+  μm = ((1+2*Λ)-sqrt(1+4*Λ))/(2*Λ)
+  D = (μp^(M+1)-μp^(M-1))-(μm^(M+1)-μm^(M-1))
+  F = ( (1-μm)*(μp^(M+1)-μp^(M-1))-(1-μp)*(μm^(M+1)-μm^(M-1)) )/D
+  ρ = (gin-gL)/(gL*F*sqrt(Λ))
+end
+export discrete_rho
+
+function discrete_gin(args::Union{MLMDS_Param})
+  @unpack λ, L, M, gL, ρ = args
+  Δx = L/M
+  Λ = λ^2/Δx^2
+  μp = ((1+2*Λ)+sqrt(1+4*Λ))/(2*Λ)
+  μm = ((1+2*Λ)-sqrt(1+4*Λ))/(2*Λ)
+  D = (μp^(M+1)-μp^(M-1))-(μm^(M+1)-μm^(M-1))
+  F = ( (1-μm)*(μp^(M+1)-μp^(M-1))-(1-μp)*(μm^(M+1)-μm^(M-1)) )/D
+  gin = gL*(1+ρ*F*sqrt(Λ))
+end
+export discrete_gin
+
 function Jacobian(x,args)
   f((x)) = Fσ_dyn(x,args)
   J = ForwardDiff.jacobian(X -> f(X), x)
@@ -92,7 +167,7 @@ function Iscale(args::Union{MLS_Param, WBS_Param})
   1
 end
 
-function Iscale(args::Union{MLDS_Param, WBDS_Param})
+function Iscale(args::Union{MLDS_Param, WBDS_Param, MLMDS_Param})
   @unpack xin, λ = args
   exp(-xin/λ)
 end

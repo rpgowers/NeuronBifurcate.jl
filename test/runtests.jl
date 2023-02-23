@@ -52,6 +52,14 @@ using Test
     @test hopf_stability(vh, ωh, args_mlds) > 0.0 # this hopf bifurcation should be subcritical
     @test btc(args_mls)[4][1] > 0.0 # time constant of btc should be non-negative
 
+    args_mlmds = MLMDS_Param(M=50, L=1000, λ=100.0)
+    ρdisc = discrete_rho(4.0, args_mlmds)
+    args_mlmds.ρ = ρdisc
+    @test discrete_gin(args_mlmds) == 4.0
+    @test I∞(v, args_mlmds) == I∞(v, args_mlds)
+    @test length(vfps(args_mlmds)) == 1
+    @test length(sn(args_mlmds)[1]) == 2
+
     args_wbds = WBDS_Param(ρ=1.0)
     v = -50.0
     n = 0.1
