@@ -30,6 +30,7 @@ gσ = 0.1
 τδ = [1.0, 2.5, 5.0, 10.0]
 
 Isn = zeros(length(gin),2)
+vh = zeros(length(τδ), length(gin), 2)
 Ih = zeros(length(τδ), length(gin), 2)
 Sh = zeros(length(τδ), length(gin), 2)
 ωh = zeros(length(τδ), length(gin), 2)
@@ -39,7 +40,6 @@ gbt = zeros(length(τδ))
 
 vc, Ic, ρc = cusp(WBDS_Param())
 gc = gσ.*(1 .+ρc)
-
 
 hstop = 0
 for j in eachindex(τδ)
@@ -51,14 +51,12 @@ for j in eachindex(τδ)
     vout, Iout = sn(args)
     length(vout) > 1 ? Isn[i,:] .= Iout[1:2] : Isn[i,:] .= NaN
     if hstop == 0
-      # if gin[i] > gbt[j]
-        Ih[j,i,:], ωh[j,i,:], vh, hstop = hopf_finder([vbt[j], -30.0], [1.5e-2, 1.7], args; ωtol=1e-2, vtol=1e-2)
-        Sh[j,i,:] .= hopfstab_finder([vh[1], vh[2]], ωh[j,i,:], Ih[j,i,:],args)
-      # else
-      #   Ih[j,i,1] = NaN
-      #   vh, Ih[j,i,2], ωh[j,i,2] = hopf(args; v0=-30.0, ω0=1.7, ωtol = 0.0)
-        # Sh[j,i,2] = 1.0
-      # end
+      Ih[j,i,:], ωh[j,i,:], vh[j,i,:], hstop = hopf_finder([vbt[j], -30.0], [1.5e-2, 1.7], args; ωtol=1e-4, vtol=1e-2)
+      Sh[j,i,:] .= hopfstab_finder([vh[1], vh[2]], ωh[j,i,:], Ih[j,i,:],args)
+      if gin[i] < gbt[j]
+        vh[j,i,1] = vbt[j]
+        Ih[j,i,1] = NaN
+      end  
     else
       Ih[j,i,:] .= NaN
     end

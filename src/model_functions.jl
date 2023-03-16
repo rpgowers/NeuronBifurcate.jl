@@ -36,6 +36,11 @@ function I∞(v, args::Union{MLDS_Param, WBDS_Param})
   return soma_voltage(X∞(v,args),args)*C+ρ*gL*(EL-v)+Iext*exp(-xin/λ)
 end
 
+function I∞(v, args::Union{MLFDS_Param})
+  @unpack C, ρ, xin, λ, gL, EL, Iext, L = args
+  return soma_voltage(X∞(v,args),args)*C+ρ*gL*(EL-v)*tanh(L/λ)+Iext*cosh((L-xin)/λ)/cosh(L/λ)
+end
+
 function Dax(args::Union{MLMDS_Param})
   @unpack λ, L, M = args
   Δx = L/M
@@ -74,6 +79,25 @@ function bt(args::Union{MLDS_Param, WBDS_Param})
   fbt(v) = C+0.5*τδ*(-gL+∇F(X∞(v,args))[end])+sum((0.5*τδ .+ τa(v,args)).*∇F(X∞(v,args))[1:dims-1].*dA∞(v,args))
   ρ(v) = (-gL+∇F(X∞(v,args))[end]+sum(∇F(X∞(v,args))[1:dims-1].*dA∞(v,args)))/gL
   vbt = find_zeros(v -> fbt(v), -80.0, 40.0)
+  ρbt = ρ.(vbt)
+  Ibt = zeros(length(vbt))
+  for i in eachindex(Ibt)
+    args_temp = setproperties(args, (ρ = ρbt[i], Iext=0.0))
+    Ibt[i] = -I∞(vbt[i],args_temp)/Iscale(args_temp)
+  end
+  return vbt, Ibt, ρbt
+end
+
+function bt(args::Union{MLFDS_Param})
+  @unpack C, gL, An, Δn, ϕ, τδ, L, λ, dims = args
+  l = L/λ
+  α0 = 0.5*(1+l/(cosh(l)*sinh(l)))
+  F(x) = Ia(x, args)
+  ∇F(x) = ForwardDiff.gradient(F, x)
+  fbt(v) = C+α0*τδ*(-gL+∇F(X∞(v,args))[end])+sum((α0*τδ .+ τa(v,args)).*∇F(X∞(v,args))[1:dims-1].*dA∞(v,args))
+  ρ(v) = (-gL+∇F(X∞(v,args))[end]+sum(∇F(X∞(v,args))[1:dims-1].*dA∞(v,args)))/(gL*tanh(l))
+  vbt = find_zeros(v -> fbt(v), -80.0, 40.0)
+  # ρbt = (∂f∂v(vbt[end],args)+∂f∂n(vbt[end],args)*da∞(vbt[end],An,Δn))*C/(gL*tanh(l))
   ρbt = ρ.(vbt)
   Ibt = zeros(length(vbt))
   for i in eachindex(Ibt)
@@ -125,9 +149,14 @@ function Iscale(args::Union{MLS_Param, WBS_Param})
   1
 end
 
-function Iscale(args::Union{MLDS_Param, WBDS_Param, MLMDS_Param})
+function Iscale(args::Union{MLDS_Param, WBDS_Param, MLMDS_Param}) # questionable whether the last one should be here
   @unpack xin, λ = args
   exp(-xin/λ)
+end
+
+function Iscale(args::Union{MLFDS_Param})
+  @unpack xin, λ, L = args
+  cosh((L-xin)/λ)/cosh(L/λ)
 end
 
 function sn(args)
@@ -206,13 +235,11 @@ function hopf(args::Union{MLDS_Param, WBDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 
   function DS_hopftest!(F, (v, ω))
     F[1] = -gL+∇F(X∞(v,args))[end]-0.5*z(ω, τδ)*ρ*gL+sum( ∇F(X∞(v,args))[1:dims-1].*dA∞(v,args)./(1 .+ω^2 .*τa(v,args).^2 ) )
     F[2] = C+0.5*u(ω, τδ)*ρ*gL/ω+sum( ∇F(X∞(v,args))[1:dims-1].*dA∞(v,args).*τa(v,args)./(1 .+ω^2 .*τa(v,args).^2 ) )
-    # F[1] = ∂f∂n(v,args)*da∞(v,An,Δn)*ψa(v,ϕ,An,Δn)^2/(ψa(v,ϕ,An,Δn)^2+ω^2)+∂f∂v(v,args)-0.5*z(ω, τδ)*ρ*gL/C
-    # F[2] = -∂f∂n(v,args)*da∞(v,An,Δn)*ψa(v,ϕ,An,Δn)/(ψa(v,ϕ,An,Δn)^2+ω^2)-1-0.5*u(ω, τδ)*ρ*gL/(C*ω)
   end
   output = nlsolve(DS_hopftest!, [v0;ω0], autodiff = :forward, ftol=1e-8)
   vh = output.zero[1]
   ωh = output.zero[2]
-  if ωh < ωtol
+  if abs(ωh) < ωtol
     vh = NaN
     Ih = NaN
   else
