@@ -124,7 +124,7 @@ end
 
 function Fall_dyn(x,args::Union{MLMDS_Param})
   @unpack M, dims = args
-  out = zeros(dims+M)
+  out = similar(x)
   out[1:dims] .= Fσ_dyn(x[1:dims],args)
   out[dims] += fax(x[dims:dims+1], args)
   for i=dims+1:M+(dims-1)
@@ -248,6 +248,32 @@ function hopf(args::Union{MLDS_Param, WBDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 
   end
   return vh, Ih, ωh
 end
+
+function hopf(args::Union{MLFDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 1e-3)
+  @unpack dims, τδ, C, gL, ρ, L, λ  = args
+  l = L/λ
+  F(x) = Ia(x, args)
+  ∇F(x) = ForwardDiff.gradient(F, x)
+
+  function DS_hopftest!(F, (v, ω))
+    F1D = -0.5*ρ*gL*(z(ω,τδ)*sinh(l*z(ω,τδ))-u(ω,τδ)*sin(l*u(ω, τδ)))/(cosh(l*z(ω, τδ))+cos(l*u(ω, τδ)) )
+    F2D = 0.5*ρ*gL/(ω)*(u(ω, τδ)*sinh(l*z(ω, τδ))+z(ω, τδ)*sin(l*u(ω, τδ)))/(cosh(l*z(ω, τδ))+cos(l*u(ω, τδ)))
+    F[1] = -gL+∇F(X∞(v,args))[end]+sum( ∇F(X∞(v,args))[1:dims-1].*dA∞(v,args)./(1 .+ω^2 .*τa(v,args).^2 ) )+F1D
+    F[2] = C+sum( ∇F(X∞(v,args))[1:dims-1].*dA∞(v,args).*τa(v,args)./(1 .+ω^2 .*τa(v,args).^2 ) )+F2D
+  end
+  output = nlsolve(DS_hopftest!, [v0;ω0], autodiff = :forward, ftol=1e-8)
+  vh = output.zero[1]
+  ωh = output.zero[2]
+  if abs(ωh) < ωtol
+    vh = NaN
+    Ih = NaN
+  else
+    args_temp = @set args.Iext = 0.0
+    Ih = -I∞(vh,args_temp)
+  end
+  return vh, Ih, ωh
+end
+
 export hopf
 
 function Bexp(x,y,v,args)
