@@ -117,4 +117,22 @@ end
   xin::Float64 = 0.0
 end
 
-export WB_Model, WBS_Param, WBDS_Param
+@with_kw mutable struct WBFDS_Param <: WB_Model
+  dims::Int64 = 3 # dimensions of the somatic compartment
+  C::Float64 = 1.0
+  gL::Float64 = 0.1
+  EL::Float64 = -65.0
+  gNa::Float64 = 35.0
+  ENa::Float64 = 55.0
+  gK::Float64 = 9.0
+  EK::Float64 = -90.0
+  ϕ::Float64 = 5.0
+  Iext::Float64 = 0.0
+  ρ::Float64 = 1.0
+  λ::Float64 = 200.0
+  τδ::Float64 = 10.0
+  L::Float64 = 1000.0
+  xin::Float64 = 0.0
+end
+
+export WB_Model, WBS_Param, WBDS_Param, WBFDS_Param

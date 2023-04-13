@@ -36,7 +36,7 @@ function I∞(v, args::Union{MLDS_Param, WBDS_Param})
   return soma_voltage(X∞(v,args),args)*C+ρ*gL*(EL-v)+Iext*exp(-xin/λ)
 end
 
-function I∞(v, args::Union{MLFDS_Param})
+function I∞(v, args::Union{MLFDS_Param, WBFDS_Param})
   @unpack C, ρ, xin, λ, gL, EL, Iext, L = args
   return soma_voltage(X∞(v,args),args)*C+ρ*gL*(EL-v)*tanh(L/λ)+Iext*cosh((L-xin)/λ)/cosh(L/λ)
 end
@@ -88,8 +88,8 @@ function bt(args::Union{MLDS_Param, WBDS_Param})
   return vbt, Ibt, ρbt
 end
 
-function bt(args::Union{MLFDS_Param})
-  @unpack C, gL, An, Δn, ϕ, τδ, L, λ, dims = args
+function bt(args::Union{MLFDS_Param, WBFDS_Param})
+  @unpack C, gL, τδ, L, λ, dims = args
   l = L/λ
   α0 = 0.5*(1+l/(cosh(l)*sinh(l)))
   F(x) = Ia(x, args)
@@ -153,7 +153,7 @@ function Iscale(args::Union{MLDS_Param, WBDS_Param, MLMDS_Param}) # questionable
   exp(-xin/λ)
 end
 
-function Iscale(args::Union{MLFDS_Param})
+function Iscale(args::Union{MLFDS_Param, WBFDS_Param})
   @unpack xin, λ, L = args
   cosh((L-xin)/λ)/cosh(L/λ)
 end
