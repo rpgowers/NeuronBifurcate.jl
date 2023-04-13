@@ -97,7 +97,6 @@ function bt(args::Union{MLFDS_Param})
   fbt(v) = C+α0*τδ*(-gL+∇F(X∞(v,args))[end])+sum((α0*τδ .+ τa(v,args)).*∇F(X∞(v,args))[1:dims-1].*dA∞(v,args))
   ρ(v) = (-gL+∇F(X∞(v,args))[end]+sum(∇F(X∞(v,args))[1:dims-1].*dA∞(v,args)))/(gL*tanh(l))
   vbt = find_zeros(v -> fbt(v), -80.0, 40.0)
-  # ρbt = (∂f∂v(vbt[end],args)+∂f∂n(vbt[end],args)*da∞(vbt[end],An,Δn))*C/(gL*tanh(l))
   ρbt = ρ.(vbt)
   Ibt = zeros(length(vbt))
   for i in eachindex(Ibt)
@@ -223,8 +222,8 @@ end
 export btc
 
 z(ω, τδ) = sqrt(2+2*sqrt(1+ω^2*τδ^2))
-# u(ω, τδ) = sign(ω)*sqrt(-2+2*sqrt(1+ω^2*τδ^2)) # we never actually want ω to be negative so do we need the sign?
-u(ω, τδ) = sqrt(-2+2*sqrt(1+ω^2*τδ^2))
+u(ω, τδ) = sign(ω)*sqrt(-2+2*sqrt(1+ω^2*τδ^2))
+# u(ω, τδ) = sqrt(-2+2*sqrt(1+ω^2*τδ^2))
 
 
 function hopf(args::Union{MLDS_Param, WBDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 1e-3)
@@ -246,7 +245,7 @@ function hopf(args::Union{MLDS_Param, WBDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 
     args_temp = @set args.Iext = 0.0
     Ih = -I∞(vh,args_temp)
   end
-  return vh, Ih, ωh
+  return vh, Ih, abs(ωh)
 end
 
 function hopf(args::Union{MLFDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 1e-3)
@@ -271,7 +270,7 @@ function hopf(args::Union{MLFDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 1e-3)
     args_temp = @set args.Iext = 0.0
     Ih = -I∞(vh,args_temp)
   end
-  return vh, Ih, ωh
+  return vh, Ih, abs(ωh)
 end
 
 export hopf

@@ -7,7 +7,7 @@ using Test
     v = -50.0
     n = 0.1
     @test a∞(v, args_mls.An, args_mls.Δn) > 0.0 # can't have negative gating variable values
-    @test ψa(v, args_mls.ϕ, args_mls.An, args_mls.Δn) > 0.0 # can't have negative inverse time constants
+    @test ψa(v, args_mls) > 0.0 # can't have negative inverse time constants
     @test ML_ncurrent((n,v),args_mls) > -Inf
     @test soma_voltage((n,v),args_mls) > -Inf
     @test length(Fσ_dyn((n,v), args_mls)) == 2
@@ -51,6 +51,12 @@ using Test
     @test ωh > 0.0 # hopf frequency should be above zero
     @test hopf_stability(vh, ωh, args_mlds) > 0.0 # this hopf bifurcation should be subcritical
     @test btc(args_mls)[4][1] > 0.0 # time constant of btc should be non-negative
+
+    args_mlfds = MLFDS_Param(ρ=1.0)
+    @test length(vfps(args_mlfds)) == 1
+    @test length(sn(args_mlfds)[1]) == 2
+    @test bt(args_mlfds)[3][1] > 0.0
+    @test hopf(args_mlfds)[3][1] > 0.0
 
     args_mlmds = MLMDS_Param(M=50, L=1000, λ=100.0)
     ρdisc = discrete_rho(4.0, args_mlmds)
