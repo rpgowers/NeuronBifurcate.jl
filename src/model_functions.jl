@@ -223,8 +223,6 @@ export btc
 
 z(ω, τδ) = sqrt(2+2*sqrt(1+ω^2*τδ^2))
 u(ω, τδ) = sign(ω)*sqrt(-2+2*sqrt(1+ω^2*τδ^2))
-# u(ω, τδ) = sqrt(-2+2*sqrt(1+ω^2*τδ^2))
-
 
 function hopf(args::Union{MLDS_Param, WBDS_Param}; v0 =-10.0, ω0=0.05, ωtol = 1e-3)
   @unpack dims, τδ, C, gL, ρ = args
