@@ -66,14 +66,17 @@ end
 
 @testset "MLMDS Model" begin
 	v = -50.0
+  M = 50
 	args_mlds = MLDS_Param(ρ = 1.0)
-	args_mlmds = MLMDS_Param(M=50, L=1000, λ=100.0)
+	args_mlmds = MLMDS_Param(M=M, L=1000, λ=100.0)
   ρdisc = discrete_rho(4.0, args_mlmds)
   args_mlmds.ρ = ρdisc
   @test discrete_gin(args_mlmds) == 4.0
   @test I∞(v, args_mlmds) == I∞(v, args_mlds)
   @test length(vfps(args_mlmds)) == 1
   @test length(sn(args_mlmds)[1]) == 2
+  x = vcat([0.1], ones(M+1).*v)
+  @test length(Fall_dyn(x,args_mlmds)) == M+2
 end
 
 @testset "WBDS Model" begin
