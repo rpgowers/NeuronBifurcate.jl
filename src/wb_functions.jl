@@ -111,20 +111,20 @@ function hopf(args::WBS_Param)
   return vh, Ih, ωh
 end
 
-function hopf_old(args::WBDS_Param; v0 =-10.0, ω0=0.0025)
-  @unpack C, ϕ, τδ, ρ, gL = args
-  function WBC1_hopftest!(F, (v, ω))
-    F[1] = ∂f∂n(v,args)*dninf(v)/(1+ω^2*τn(v,ϕ)^2)+∂f∂h(v,args)*dhinf(v)/(1+ω^2*τh(v,ϕ)^2)+∂f∂v(v,args)-ρ*gL*z(ω,τδ)/(2*C)
-    F[2] = τn(v,ϕ)*∂f∂n(v,args)*dninf(v)/(1+ω^2*τn(v,ϕ)^2)+τh(v,ϕ)*∂f∂h(v,args)*dhinf(v)/(1+ω^2*τh(v,ϕ)^2)+1+ρ*gL*u(ω,τδ)/(2*C*ω)
-  end
-  output = nlsolve(WBC1_hopftest!, [v0;ω0], autodiff = :forward, ftol=1e-8)
-  vh = output.zero[1]
-  ωh = output.zero[2]
-  args_temp = @set args.Iext = 0.0
-  Ih = -I∞(vh, args_temp)
-  return vh, Ih, ωh
-end
-export hopf_old
+# function hopf_old(args::WBDS_Param; v0 =-10.0, ω0=0.0025)
+#   @unpack C, ϕ, τδ, ρ, gL = args
+#   function WBC1_hopftest!(F, (v, ω))
+#     F[1] = ∂f∂n(v,args)*dninf(v)/(1+ω^2*τn(v,ϕ)^2)+∂f∂h(v,args)*dhinf(v)/(1+ω^2*τh(v,ϕ)^2)+∂f∂v(v,args)-ρ*gL*z(ω,τδ)/(2*C)
+#     F[2] = τn(v,ϕ)*∂f∂n(v,args)*dninf(v)/(1+ω^2*τn(v,ϕ)^2)+τh(v,ϕ)*∂f∂h(v,args)*dhinf(v)/(1+ω^2*τh(v,ϕ)^2)+1+ρ*gL*u(ω,τδ)/(2*C*ω)
+#   end
+#   output = nlsolve(WBC1_hopftest!, [v0;ω0], autodiff = :forward, ftol=1e-8)
+#   vh = output.zero[1]
+#   ωh = output.zero[2]
+#   args_temp = @set args.Iext = 0.0
+#   Ih = -I∞(vh, args_temp)
+#   return vh, Ih, ωh
+# end
+# export hopf_old
 
 function l1_coeff_general(p,q,B,C,ω,v,J,args)
   @unpack dims = args
