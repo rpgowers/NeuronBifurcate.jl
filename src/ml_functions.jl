@@ -50,13 +50,15 @@ function Ia((n,v),args)
   gs*n*(Es-v)+gf*m∞(v,args)*(Ef-v)
 end
 
+function A_dyn((n,v), args::ML_Model) # this will be more useful for multiple active variables
+  return [ML_ncurrent((n,v),args)]
+end
+
 function X∞(v,args::ML_Model)
-  # [a∞(v,args.An,args.Δn), v]
   [n∞(v,args), v]
 end
 
 function dA∞(v,args::ML_Model)
-  # da∞(v,args.An,args.Δn)
   dn∞(v,args)
 end
 
