@@ -133,22 +133,6 @@ function Fall_dyn(x,args::Union{MLMDS_Param})
   return out
 end
 
-# function Fall_dyn(x,args::Union{MLADS_Param})
-#   @unpack M, adims, gL, ϵ, τδ = args
-#   iσ = adims*(M+1)+1 # somatic voltage index
-#   out = similar(x)
-#   out[vcat(1:adims, [iσ])] .= Fσ_dyn(x[vcat(1:adims, [iσ])], args)
-#   out[iσ] += fax(x[iσ:iσ+1], args)
-#   for j=1:M-1
-#     # update the dendritic active variables
-#     out[j*adims+1:(j+1)*adims] .= A_dyn(x[vcat(j*adims+1:(j+1)*adims, [iσ+j])], args)
-#     out[iσ+j] = fδ((x[iσ+j-1], x[iσ+j], x[iσ+j+1]), args)+ϵ*Ia(x[vcat(j*adims+1:(j+1)*adims, [iσ+j])], args)/(τδ*gL)
-#   end
-#   out[M*adims+1:(M+1)*adims] .= A_dyn(x[vcat(M*adims+1:(M+1)*adims, [iσ+M])], args)
-#   out[end] = fseal((x[end-1], x[end]), args)+ϵ*Ia(x[vcat(M*adims+1:(M+1)*adims, [iσ+M])], args)/(τδ*gL)
-#   return out
-# end
-
 function Fall_dyn(x,args::Union{MLADS_Param})
   @unpack M, adims, gL, ϵ, τδ = args
   iσ = adims*(M+1)+1 # somatic voltage index
